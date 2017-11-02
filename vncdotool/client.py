@@ -123,6 +123,7 @@ class AuthenticationError(Exception):
 
 
 class VNCDoToolClient(rfb.RFBClient):
+    encoding = rfb.RAW_ENCODING
     x = 0
     y = 0
     buttons = 0
@@ -288,7 +289,7 @@ class VNCDoToolClient(rfb.RFBClient):
                 sum_ += (h - e) ** 2
             rms = math.sqrt(sum_ / len(hist))
 
-            log.debug('rms %s', int(rms))
+            log.debug('rms:%s maxrms: %s', int(rms), int(maxrms))
             if rms <= maxrms:
                 return self
 
@@ -344,9 +345,11 @@ class VNCDoToolClient(rfb.RFBClient):
 
     def vncConnectionMade(self):
         self.setPixelFormat()
-        encodings = [rfb.RAW_ENCODING]
+        encodings = [self.encoding]
         if self.factory.pseudocursor or self.factory.nocursor:
             encodings.append(rfb.PSEUDO_CURSOR_ENCODING)
+        if self.factory.pseudodesktop:
+            encodings.append(rfb.PSEUDO_DESKTOP_SIZE_ENCODING)
         self.setEncodings(encodings)
         self.factory.clientConnectionMade(self)
 
@@ -414,7 +417,8 @@ class VNCDoToolClient(rfb.RFBClient):
 
     def updateDesktopSize(self, width, height):
         new_screen = Image.new("RGB", (width, height), "black")
-        new_screen.paste(self.screen, (0, 0))
+        if self.screen:
+            new_screen.paste(self.screen, (0, 0))
         self.screen = new_screen
 
 
@@ -426,6 +430,7 @@ class VNCDoToolFactory(rfb.RFBFactory):
 
     pseudocursor = False
     nocursor = False
+    pseudodesktop = True
     force_caps = False
 
     def __init__(self):
